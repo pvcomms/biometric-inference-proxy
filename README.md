@@ -166,6 +166,40 @@ Manually trigger a Whoop poll and KV update. Useful for testing or forcing a ref
 curl -X POST http://localhost:3000/poll
 ```
 
+## Dynamic mode routing (decision tree)
+
+Instead of a flat `recovery → mode` map, the proxy walks a decision tree per request. The tree branches on `recovery_tier × request_type × hour × intent` and is defined in `config/decision-tree.json` — edit it without touching code.
+
+- `GET /decision-tree` — returns the current tree.
+- `POST /decision-tree/reload` — clears the cache and reloads from disk.
+- Override per request: `x-override-mode: red|yellow|green|peak` header — useful for A/B testing.
+- Every decision logs its path, e.g. `by_recovery_tier > green_branch > mode_peak`.
+
+## Live request stream
+
+- `GET /stream` — Server-Sent Events of every proxied request (no prompts, no completions). Filter by mode: `/stream?mode=green`.
+- `GET /stream/view` — Minimal HTML viewer (Japanese+Nordic). Shows timestamp, route, model, latency bar, cost. Auto-reconnects.
+
+Each event:
+
+```json
+{
+  "id": "uuid",
+  "ts": "2026-04-20T08:00:00Z",
+  "mode": "peak",
+  "path": ["by_recovery_tier", "green_branch", "mode_peak"],
+  "model": "claude-sonnet-4-6",
+  "request_type": "coding",
+  "intent": "debug",
+  "latency_ms": 842,
+  "input_tokens": 120,
+  "output_tokens": 340,
+  "estimated_cost_usd": 0.00546,
+  "override": false,
+  "status": "ok"
+}
+```
+
 ## Extending
 
 To add Oura, Garmin, or another biometric source:

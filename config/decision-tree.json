@@ -1,0 +1,113 @@
+{
+  "$schema": "Decision tree for mode selection. Each node has either a terminal `mode` or a `split` with ordered `cases`. Each case has a `when` predicate object (AND semantics) and a `next` node id. `default` fires if no case matches. Predicates: { key, op, value } where op is one of: eq, ne, in, gte, lte, between, contains. Keys: recovery_score, recovery_tier, request_type, hour, intent, message_count, total_chars.",
+  "root": "by_recovery_tier",
+  "nodes": {
+    "by_recovery_tier": {
+      "split": "by recovery tier",
+      "cases": [
+        {
+          "when": [{ "key": "recovery_tier", "op": "eq", "value": "red" }],
+          "next": "red_branch"
+        },
+        {
+          "when": [{ "key": "recovery_tier", "op": "eq", "value": "yellow" }],
+          "next": "yellow_branch"
+        },
+        {
+          "when": [{ "key": "recovery_tier", "op": "eq", "value": "green" }],
+          "next": "green_branch"
+        },
+        {
+          "when": [{ "key": "recovery_tier", "op": "eq", "value": "peak" }],
+          "next": "peak_branch"
+        }
+      ],
+      "default": "yellow_branch"
+    },
+    "red_branch": {
+      "split": "red: always conservative",
+      "cases": [
+        {
+          "when": [{ "key": "request_type", "op": "eq", "value": "coding" }],
+          "next": "mode_red"
+        },
+        {
+          "when": [{ "key": "intent", "op": "eq", "value": "creative" }],
+          "next": "mode_red"
+        }
+      ],
+      "default": "mode_red"
+    },
+    "yellow_branch": {
+      "split": "yellow: route by request type",
+      "cases": [
+        {
+          "when": [{ "key": "request_type", "op": "eq", "value": "coding" }],
+          "next": "yellow_coding"
+        },
+        {
+          "when": [{ "key": "request_type", "op": "eq", "value": "analysis" }],
+          "next": "mode_yellow"
+        },
+        {
+          "when": [{ "key": "intent", "op": "eq", "value": "creative" }],
+          "next": "mode_green"
+        }
+      ],
+      "default": "mode_yellow"
+    },
+    "yellow_coding": {
+      "split": "yellow + coding: time of day",
+      "cases": [
+        {
+          "when": [{ "key": "hour", "op": "between", "value": [6, 11] }],
+          "next": "mode_green"
+        },
+        {
+          "when": [{ "key": "hour", "op": "between", "value": [12, 17] }],
+          "next": "mode_yellow"
+        },
+        {
+          "when": [{ "key": "hour", "op": "between", "value": [22, 28] }],
+          "next": "mode_red"
+        }
+      ],
+      "default": "mode_yellow"
+    },
+    "green_branch": {
+      "split": "green: unlock thinking",
+      "cases": [
+        {
+          "when": [
+            { "key": "request_type", "op": "eq", "value": "coding" },
+            { "key": "hour", "op": "between", "value": [6, 11] }
+          ],
+          "next": "mode_peak"
+        },
+        {
+          "when": [{ "key": "intent", "op": "eq", "value": "creative" }],
+          "next": "mode_peak"
+        },
+        {
+          "when": [{ "key": "request_type", "op": "eq", "value": "chitchat" }],
+          "next": "mode_yellow"
+        }
+      ],
+      "default": "mode_green"
+    },
+    "peak_branch": {
+      "split": "peak: lean in unless chitchat",
+      "cases": [
+        {
+          "when": [{ "key": "request_type", "op": "eq", "value": "chitchat" }],
+          "next": "mode_green"
+        }
+      ],
+      "default": "mode_peak"
+    },
+    "mode_red": { "mode": "red" },
+    "mode_yellow": { "mode": "yellow" },
+    "mode_green": { "mode": "green" },
+    "mode_peak": { "mode": "peak" }
+  }
+}
