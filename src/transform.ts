@@ -5,7 +5,7 @@ import type {
   InferenceParams,
 } from "./types.js";
 
-const OPENAI_TO_CLAUDE_MODEL = "claude-sonnet-4-6";
+const OPENAI_TO_CLAUDE_MODEL = "claude-opus-4-7";
 const CLAUDE_MODEL_PREFIX = "claude-";
 
 function resolveModel(model: string): string {
